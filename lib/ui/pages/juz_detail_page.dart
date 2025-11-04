@@ -1,0 +1,77 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../providers/quran_providers.dart';
+
+class JuzDetailPage extends ConsumerWidget {
+  final int juzNumber;
+  const JuzDetailPage({super.key, required this.juzNumber});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final juzAsync = ref.watch(juzDetailProvider(juzNumber));
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Juz $juzNumber', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+      ),
+      body: SafeArea(
+        child: juzAsync.when(
+          data: (state) {
+            if (state.ayahs.isEmpty) {
+              return const Center(child: Text('Tidak ada data untuk Juz ini.'));
+            }
+            return ListView.separated(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
+              itemCount: state.ayahs.length,
+              separatorBuilder: (_, __) => const Divider(height: 20),
+              itemBuilder: (context, index) {
+                final a = state.ayahs[index];
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 16,
+                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                          foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+                          child: Text('${a.numberInSurah}', style: const TextStyle(fontSize: 12)),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${a.surahName} • Ayat ${a.numberInSurah}',
+                            style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    SelectableText(
+                      a.arabic,
+                      textAlign: TextAlign.right,
+                      style: GoogleFonts.amiri(fontSize: 22, height: 2.0),
+                    ),
+                    if ((a.translationId ?? '').isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        a.translationId!,
+                        style: GoogleFonts.poppins(fontSize: 14),
+                      ),
+                    ],
+                  ],
+                );
+              },
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, st) => Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text('Gagal memuat Juz $juzNumber.\n$e'),
+          ),
+        ),
+      ),
+    );
+  }
+}
