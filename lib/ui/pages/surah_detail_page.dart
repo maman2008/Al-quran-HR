@@ -20,6 +20,26 @@ class _SurahDetailPageState extends ConsumerState<SurahDetailPage> {
   ConcatenatingAudioSource? _playlist;
   List<int> _ayahIndexMap = [];
   StreamSubscription<int?>? _indexSub;
+  ProviderSubscription<AudioEditionDisplay>? _qariListenSub;
+
+  void _resetPlayer(AudioPlayer player) {
+    player.stop();
+    _playlist = null;
+    _ayahIndexMap = [];
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _qariListenSub = ref.listenManual(selectedEditionProvider, (prev, next) {
+      final player = ref.read(audioPlayerProvider);
+      _indexSub?.cancel();
+      _indexSub = null;
+      _resetPlayer(player);
+      setState(() { playingAyah = null; });
+      ref.invalidate(surahDetailProvider(widget.surahNumber));
+    });
+  }
 
   Future<void> _ensurePlaylist(AudioPlayer player, List<AyahComposite> ayahs) async {
     // Build playlist from ayahs having audio
@@ -53,6 +73,7 @@ class _SurahDetailPageState extends ConsumerState<SurahDetailPage> {
   @override
   void dispose() {
     _indexSub?.cancel();
+    _qariListenSub?.close();
     super.dispose();
   }
 
@@ -68,6 +89,126 @@ class _SurahDetailPageState extends ConsumerState<SurahDetailPage> {
           orElse: () => Text('Surah ${widget.surahNumber}', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
         ),
         actions: [
+          detailAsync.maybeWhen(
+            data: (d) {
+              final noteAsync = ref.watch(surahNoteProvider(d.summary.number));
+              final hasNote = noteAsync.maybeWhen(data: (t) => (t ?? '').trim().isNotEmpty, orElse: () => false);
+              return IconButton(
+                tooltip: 'Catatan Surah',
+                icon: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Icon(Icons.note_alt_rounded),
+                    if (hasNote)
+                      Positioned(
+                        right: -1,
+                        top: -1,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, shape: BoxShape.circle),
+                        ),
+                      ),
+                  ],
+                ),
+                onPressed: () async {
+                  final existing = await ref.read(surahNoteProvider(d.summary.number).future);
+                  final ctrl = TextEditingController(text: existing ?? '');
+                  await showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                    ),
+                    builder: (ctx) {
+                      return Padding(
+                        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+                        child: SafeArea(
+                          top: false,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text('Catatan Surah ${d.summary.number}', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+                                    const Spacer(),
+                                    if ((existing ?? '').trim().isNotEmpty)
+                                      IconButton(
+                                        tooltip: 'Hapus Catatan',
+                                        onPressed: () async {
+                                          final ok = await showDialog<bool>(
+                                            context: context,
+                                            builder: (dCtx) => AlertDialog(
+                                              title: const Text('Hapus catatan?'),
+                                              content: const Text('Tindakan ini tidak dapat dibatalkan.'),
+                                              actions: [
+                                                TextButton(onPressed: () => Navigator.pop(dCtx, false), child: const Text('Batal')),
+                                                FilledButton(onPressed: () => Navigator.pop(dCtx, true), child: const Text('Hapus')),
+                                              ],
+                                            ),
+                                          );
+                                          if (ok == true) {
+                                            await ref.read(notesControllerProvider).setSurah(d.summary.number, '');
+                                            if (!mounted) return;
+                                            ref.invalidate(surahNoteProvider(d.summary.number));
+                                            ref.invalidate(surahNotesIndexProvider);
+                                            Navigator.pop(ctx);
+                                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Catatan dihapus')));
+                                          }
+                                        },
+                                        icon: const Icon(Icons.delete_outline_rounded),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: ctrl,
+                                  maxLines: 8,
+                                  decoration: const InputDecoration(
+                                    hintText: 'Tulis catatan untuk surah ini...',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: OutlinedButton(
+                                        onPressed: () => Navigator.pop(ctx),
+                                        child: const Text('Tutup'),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: FilledButton(
+                                        onPressed: () async {
+                                          await ref.read(notesControllerProvider).setSurah(d.summary.number, ctrl.text);
+                                          if (!mounted) return;
+                                          ref.invalidate(surahNoteProvider(d.summary.number));
+                                          ref.invalidate(surahNotesIndexProvider);
+                                          Navigator.pop(ctx);
+                                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Catatan surah tersimpan')));
+                                        },
+                                        child: const Text('Simpan'),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              );
+            },
+            orElse: () => const SizedBox.shrink(),
+          ),
           detailAsync.maybeWhen(
             data: (d) => IconButton(
               tooltip: 'Tentang surah ini',

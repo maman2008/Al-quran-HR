@@ -7,6 +7,10 @@ import 'surah_detail_page.dart';
 import 'juz_detail_page.dart';
 import '../widgets/qari_picker.dart';
 import 'bookmark_page.dart';
+import 'zikir_page.dart';
+import 'notes_page.dart';
+import 'prayer_times_page.dart';
+import 'qibla_page.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -268,6 +272,56 @@ class HomeScreen extends ConsumerWidget {
                           // Bookmarks section removed as requested
                           const SizedBox(height: 0),
                           
+                          // Quick Actions
+                          Text(
+                            'Akses Cepat',
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          GridView.count(
+                            crossAxisCount: 4,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            children: [
+                              _QuickAction(
+                                icon: Icons.menu_book_rounded,
+                                label: 'Zikir',
+                                onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => const ZikirPage()),
+                                ),
+                              ),
+                              _QuickAction(
+                                icon: Icons.note_alt_rounded,
+                                label: 'Catatan',
+                                onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => const NotesPage()),
+                                ),
+                              ),
+                              _QuickAction(
+                                icon: Icons.access_time_rounded,
+                                label: 'Sholat',
+                                onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => const PrayerTimesPage()),
+                                ),
+                              ),
+                              _QuickAction(
+                                icon: Icons.explore_rounded,
+                                label: 'Kiblat',
+                                onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => const QiblaPage()),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          
+
                           // Surah List Header
                           Text(
                             'Daftar Surah',
@@ -416,6 +470,45 @@ class HomeScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _QuickAction({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.4)),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 22, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
               ),
             ],
           ),

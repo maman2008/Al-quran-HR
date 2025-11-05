@@ -6,10 +6,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api/alquran_api.dart';
 import '../models/surah_models.dart';
 import '../core/api/quran_com_api.dart';
+import '../core/api/aladhan_api.dart';
+import '../core/api/myquran_api.dart';
 
 // API client provider
 final apiProvider = Provider<AlQuranApi>((ref) => AlQuranApi());
 final quranComApiProvider = Provider<QuranComApi>((ref) => QuranComApi());
+final alAdhanApiProvider = Provider<AlAdhanApi>((ref) => AlAdhanApi());
+final myQuranApiProvider = Provider<MyQuranApi>((ref) => MyQuranApi());
 
 // Theme mode toggle and persistence
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
@@ -384,3 +388,57 @@ class _BookmarkController {
 
 // Recommended surah numbers for quick access
 final recommendedSurahNumbers = [1, 2, 18, 19, 36, 55, 56, 67, 112, 113, 114];
+
+class _NotesController {
+  Future<List<int>> _getIndex() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList('notes_surah_index') ?? <String>[];
+    return raw.map((e) => int.tryParse(e) ?? 0).where((e) => e > 0).toList();
+  }
+
+  Future<void> _setIndex(List<int> list) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('notes_surah_index', list.map((e) => e.toString()).toList());
+  }
+
+  Future<String?> getSurah(int surah) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('note_surah_$surah');
+  }
+
+  Future<void> setSurah(int surah, String text) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (text.trim().isEmpty) {
+      await prefs.remove('note_surah_$surah');
+      final idx = await _getIndex();
+      idx.remove(surah);
+      await _setIndex(idx);
+    } else {
+      await prefs.setString('note_surah_$surah', text);
+      final idx = await _getIndex();
+      if (!idx.contains(surah)) {
+        idx.add(surah);
+        idx.sort();
+        await _setIndex(idx);
+      } else {
+        await _setIndex(idx);
+      }
+    }
+  }
+
+  Future<List<int>> listSurahWithNotes() async {
+    return _getIndex();
+  }
+}
+
+final notesControllerProvider = Provider((ref) => _NotesController());
+
+final surahNoteProvider = FutureProvider.family<String?, int>((ref, surah) async {
+  final ctrl = ref.read(notesControllerProvider);
+  return ctrl.getSurah(surah);
+});
+
+final surahNotesIndexProvider = FutureProvider<List<int>>((ref) async {
+  final ctrl = ref.read(notesControllerProvider);
+  return ctrl.listSurahWithNotes();
+});
