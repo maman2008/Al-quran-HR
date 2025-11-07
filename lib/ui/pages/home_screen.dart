@@ -20,170 +20,221 @@ class HomeScreen extends ConsumerWidget {
     final surahAsync = ref.watch(surahListProvider);
     final filtered = ref.watch(filteredSurahListProvider);
     final lastReadAsync = ref.watch(lastReadProvider);
-    // Removed bookmarks section from Home; no need to watch here
+    final bookmarksAsync = ref.watch(bookmarksProvider);
 
     final searchFocus = FocusNode();
+    final w = MediaQuery.of(context).size.width;
+    final compact = w < 360;
+    // Revert background to previous constant color
+    final bgColor = const Color(0xFFFAF8F0);
     return DefaultTabController(
       length: 2,
       child: Scaffold(
+        backgroundColor: bgColor,
         appBar: AppBar(
           elevation: 0,
           scrolledUnderElevation: 0,
-          toolbarHeight: 60,
+          toolbarHeight: compact ? 64 : 70,
           backgroundColor: Colors.transparent,
           flexibleSpace: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
+            decoration: BoxDecoration(
+              // Revert to original gradient
+              gradient: const LinearGradient(
                 colors: [Color(0xFF1A5D57), Color(0xFF0D2F2D)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-          ),
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
           ),
           title: Row(
             children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: Colors.white.withOpacity(0.15),
-                child: const Icon(Icons.mosque_rounded, color: Color(0xFFFAF8F0)),
+              Container(
+                width: compact ? 34 : 40,
+                height: compact ? 34 : 40,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5),
+                ),
+                child: const Icon(Icons.mosque_rounded, color: Color(0xFFFAF8F0), size: 20),
               ),
-              const SizedBox(width: 8),
-              Text('Al-Qur\'an HR', style: GoogleFonts.amiri(fontWeight: FontWeight.w700, fontSize: 22, color: const Color(0xFFFAF8F0))),
+              SizedBox(width: compact ? 8 : 12),
+              Expanded(
+                child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Al-Qur\'an HR', 
+                    style: GoogleFonts.amiri(
+                      fontWeight: FontWeight.w700, 
+                      fontSize: compact ? 20 : 22, 
+                      color: const Color(0xFFFAF8F0),
+                      height: 1.1,
+                    ),
+                  ),
+                  if (!compact)
+                    Text('Baca • Dengar • Tadabbur',
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        color: const Color(0xFFFAF8F0).withOpacity(0.85),
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                ],
+              ),
+              ),
             ],
           ),
           actions: [
-            // Bookmark (navigate to bookmark list)
-            IconButton(
+            // Bookmark Button
+            _AppBarIcon(
+              icon: Icons.bookmark_rounded,
               tooltip: 'Bookmark',
-              icon: const Icon(Icons.bookmark_rounded, color: Color(0xFFFAF8F0)),
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
-              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const BookmarkPage()),
               ),
             ),
-          
-            // Dark mode toggle
-            IconButton(
+            
+            // Theme Toggle
+            _AppBarIcon(
+              icon: Theme.of(context).brightness == Brightness.dark
+                  ? Icons.light_mode_rounded
+                  : Icons.dark_mode_rounded,
               tooltip: 'Mode Gelap/Terang',
-              icon: Icon(
-                Theme.of(context).brightness == Brightness.dark
-                    ? Icons.light_mode_rounded
-                    : Icons.dark_mode_rounded,
-                color: const Color(0xFFFAF8F0),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
-              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
               onPressed: () {
                 final current = ref.read(themeModeProvider);
                 final next = current == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
                 ref.read(themeControllerProvider).set(next);
               },
             ),
-            // Qari picker (Audio)
-            IconButton(
+            
+            // Qari Picker
+            _AppBarIcon(
+              icon: Icons.record_voice_over_rounded,
               tooltip: 'Pilih Qari',
-              icon: const Icon(Icons.record_voice_over_rounded, color: Color(0xFFFAF8F0)),
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
-              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
               onPressed: () => showQariPicker(context, ref),
             ),
-          
-            const SizedBox(width: 16),
+            
+            const SizedBox(width: 8),
           ],
           bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(128),
+            preferredSize: Size.fromHeight(compact ? 124 : 140),
             child: Column(
               children: [
-                const SizedBox(height: 12),
+                SizedBox(height: compact ? 12 : 16),
+                // Search Bar
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                  padding: EdgeInsets.symmetric(horizontal: compact ? 16 : 20),
                   child: Material(
-                    elevation: 2,
-                    shadowColor: Colors.black.withOpacity(0.06),
-                    borderRadius: BorderRadius.circular(24),
-                    child: SizedBox(
-                      height: 48,
+                    elevation: 3,
+                    shadowColor: Colors.black.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      height: compact ? 48 : 52,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE8E8E8)),
+                      ),
                       child: TextField(
                         focusNode: searchFocus,
                         onChanged: (v) => ref.read(searchQueryProvider.notifier).state = v,
-                        style: GoogleFonts.roboto(fontSize: 15, color: const Color(0xFF1A5D57)),
+                        style: GoogleFonts.poppins(fontSize: 15, color: const Color(0xFF1A5D57)),
                         decoration: InputDecoration(
-                          hintText: 'Cari surah (nama/nomor)...',
-                          hintStyle: GoogleFonts.roboto(color: const Color(0xFF889396), fontSize: 15),
-                          prefixIcon: const Padding(
-                            padding: EdgeInsets.only(left: 12, right: 8),
-                            child: Icon(Icons.search, size: 20, color: Color(0xFF889396)),
+                          hintText: 'Cari surah, ayat, atau topik...',
+                          hintStyle: GoogleFonts.poppins(color: const Color(0xFF889396), fontSize: 14),
+                          prefixIcon: Container(
+                            margin: const EdgeInsets.all(8),
+                            padding: EdgeInsets.all(compact ? 6 : 8),
+                            child: Icon(Icons.search_rounded, size: compact ? 18 : 20, color: const Color(0xFF1A5D57)),
                           ),
-                          prefixIconConstraints: const BoxConstraints(minWidth: 40),
                           filled: true,
-                          fillColor: const Color(0xFFFAFAFA),
-                          contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1),
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: const BorderSide(color: Color(0xFF1A5D57), width: 1.5),
                           ),
                         ),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
+                
+                SizedBox(height: compact ? 12 : 16),
+                
+                // Tab Bar
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: EdgeInsets.symmetric(horizontal: compact ? 16 : 20),
                   child: Container(
+                    height: compact ? 44 : 48,
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFD9E7D5)),
+                      // Revert to previous opacity
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white.withOpacity(0.2)),
                     ),
-                    child: SizedBox(
-                      height: 40,
-                      child: Padding(
-                        padding: const EdgeInsets.all(2),
-                        child: TabBar(
-                          isScrollable: false,
-                          labelStyle: GoogleFonts.cairo(fontWeight: FontWeight.w600, fontSize: 15),
-                          unselectedLabelStyle: GoogleFonts.cairo(fontWeight: FontWeight.w600, fontSize: 15),
-                          labelColor: Colors.white,
-                          unselectedLabelColor: const Color(0xFF889396),
-                          dividerColor: Colors.transparent,
-                          labelPadding: const EdgeInsets.symmetric(horizontal: 24),
-                          indicatorSize: TabBarIndicatorSize.tab,
-                          indicator: BoxDecoration(
-                            color: const Color(0xFF1A5D57),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          tabs: const [
-                            Tab(text: 'Surah'),
-                            Tab(text: 'Juz'),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: TabBar(
+                        isScrollable: false,
+                        labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: compact ? 13 : 14),
+                        unselectedLabelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w500, fontSize: compact ? 13 : 14),
+                        labelColor: const Color(0xFF1A5D57),
+                        // Revert to previous value
+                        unselectedLabelColor: const Color(0xFFFAF8F0),
+                        dividerColor: Colors.transparent,
+                        indicatorSize: TabBarIndicatorSize.tab,
+                        indicator: BoxDecoration(
+                          color: const Color(0xFFFAF8F0),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
                           ],
                         ),
+                        tabs: const [
+                          Tab(text: 'Surah'),
+                          Tab(text: 'Juz'),
+                        ],
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: compact ? 10 : 12),
               ],
             ),
           ),
         ),
         body: SafeArea(
+          top: false,
           child: TabBarView(
             children: [
               // Surah Tab
               CustomScrollView(
+                physics: const BouncingScrollPhysics(),
                 slivers: [
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -191,146 +242,105 @@ class HomeScreen extends ConsumerWidget {
                           lastReadAsync.when(
                             data: (lr) => lr == null
                                 ? const SizedBox.shrink()
-                                : Container(
-                                    width: double.infinity,
-                                    child: InkWell(
-                                      borderRadius: BorderRadius.circular(20),
-                                      onTap: () => Navigator.of(context).push(
-                                        MaterialPageRoute(builder: (_) => SurahDetailPage(surahNumber: lr.surah)),
-                                      ),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(16),
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(20),
-                                          color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
-                                          border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.15)),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(0.06),
-                                              blurRadius: 18,
-                                              offset: const Offset(0, 8),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Icon(Icons.bookmark_rounded, color: Theme.of(context).colorScheme.primary),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    'Terakhir Dibaca',
-                                                    style: GoogleFonts.poppins(
-                                                      fontWeight: FontWeight.w700,
-                                                      fontSize: 14,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                    'Surah ${lr.surah} • Ayat ${lr.ayah}',
-                                                    style: GoogleFonts.poppins(
-                                                      fontSize: 13,
-                                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            Container(
-                                              decoration: BoxDecoration(
-                                                color: Theme.of(context).colorScheme.primary,
-                                                borderRadius: BorderRadius.circular(12),
-                                              ),
-                                              child: TextButton.icon(
-                                                onPressed: () => Navigator.of(context).push(
-                                                  MaterialPageRoute(builder: (_) => SurahDetailPage(surahNumber: lr.surah)),
-                                                ),
-                                                icon: Icon(Icons.play_arrow_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 16),
-                                                label: Text(
-                                                  'Lanjutkan',
-                                                  style: GoogleFonts.poppins(
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: Theme.of(context).colorScheme.onPrimary,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
+                                : _LastReadCard(
+                                    surah: lr.surah,
+                                    ayah: lr.ayah,
+                                    onTap: () => Navigator.of(context).push(
+                                      MaterialPageRoute(builder: (_) => SurahDetailPage(surahNumber: lr.surah)),
                                     ),
                                   ),
-                            loading: () => const SizedBox.shrink(),
+                            loading: () => _LastReadSkeleton(),
                             error: (e, _) => const SizedBox.shrink(),
                           ),
                           
-                          const SizedBox(height: 20),
-                          
-                          // Bookmarks section removed as requested
-                          const SizedBox(height: 0),
+                          const SizedBox(height: 24),
                           
                           // Quick Actions
                           Text(
                             'Akses Cepat',
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.w700,
-                              fontSize: 16,
+                              fontSize: 18,
+                              color: const Color(0xFF1A5D57),
                             ),
                           ),
-                          const SizedBox(height: 12),
-                          GridView.count(
-                            crossAxisCount: 4,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
+                          const SizedBox(height: 16),
+                          GridView.builder(
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 4,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              mainAxisExtent: 100,
+                            ),
+                            itemCount: 4,
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
+                            itemBuilder: (context, index) {
+                              switch (index) {
+                                case 0:
+                                  return _QuickAction(
+                                    icon: Icons.menu_book_rounded,
+                                    label: 'Zikir',
+                                    color: const Color(0xFF1A5D57),
+                                    onTap: () => Navigator.of(context).push(
+                                      MaterialPageRoute(builder: (_) => const ZikirPage()),
+                                    ),
+                                  );
+                                case 1:
+                                  return _QuickAction(
+                                    icon: Icons.note_alt_rounded,
+                                    label: 'Catatan',
+                                    color: const Color(0xFF1A5D57),
+                                    onTap: () => Navigator.of(context).push(
+                                      MaterialPageRoute(builder: (_) => const NotesPage()),
+                                    ),
+                                  );
+                                case 2:
+                                  return _QuickAction(
+                                    icon: Icons.access_time_rounded,
+                                    label: 'Sholat',
+                                    color: const Color(0xFF1A5D57),
+                                    onTap: () => Navigator.of(context).push(
+                                      MaterialPageRoute(builder: (_) => const PrayerTimesPage()),
+                                    ),
+                                  );
+                                default:
+                                  return _QuickAction(
+                                    icon: Icons.explore_rounded,
+                                    label: 'Kiblat',
+                                    color: const Color(0xFF1A5D57),
+                                    onTap: () => Navigator.of(context).push(
+                                      MaterialPageRoute(builder: (_) => const QiblaPage()),
+                                    ),
+                                  );
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Surah List Header
+                          Row(
                             children: [
-                              _QuickAction(
-                                icon: Icons.menu_book_rounded,
-                                label: 'Zikir',
-                                onTap: () => Navigator.of(context).push(
-                                  MaterialPageRoute(builder: (_) => const ZikirPage()),
+                              Text(
+                                'Daftar Surah',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 18,
+                                  color: const Color(0xFF1A5D57),
                                 ),
                               ),
-                              _QuickAction(
-                                icon: Icons.note_alt_rounded,
-                                label: 'Catatan',
-                                onTap: () => Navigator.of(context).push(
-                                  MaterialPageRoute(builder: (_) => const NotesPage()),
-                                ),
-                              ),
-                              _QuickAction(
-                                icon: Icons.access_time_rounded,
-                                label: 'Sholat',
-                                onTap: () => Navigator.of(context).push(
-                                  MaterialPageRoute(builder: (_) => const PrayerTimesPage()),
-                                ),
-                              ),
-                              _QuickAction(
-                                icon: Icons.explore_rounded,
-                                label: 'Kiblat',
-                                onTap: () => Navigator.of(context).push(
-                                  MaterialPageRoute(builder: (_) => const QiblaPage()),
+                              const Spacer(),
+                              Text(
+                                '${filtered.length} Surah',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: const Color(0xFF889396),
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 16),
-
-                          
-
-                          // Surah List Header
-                          Text(
-                            'Daftar Surah',
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
                         ],
                       ),
                     ),
@@ -339,14 +349,21 @@ class HomeScreen extends ConsumerWidget {
                   // Surah List
                   surahAsync.when(
                     data: (_) => SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                       sliver: SliverList.separated(
                         itemCount: filtered.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 12),
                         itemBuilder: (context, index) {
                           final s = filtered[index];
+                          final progress = ref.watch(surahProgressProvider(s.number)).maybeWhen(data: (v) => v, orElse: () => 0.0);
+                          final bookmarkedSurahSet = bookmarksAsync.maybeWhen(
+                            data: (list) => list.map((b) => b.surah).toSet(),
+                            orElse: () => <int>{},
+                          );
                           return SurahCard(
                             surah: s,
+                            progress: progress,
+                            bookmarked: bookmarkedSurahSet.contains(s.number),
                             onTap: () => Navigator.of(context).push(
                               MaterialPageRoute(builder: (_) => SurahDetailPage(surahNumber: s.number)),
                             ),
@@ -354,9 +371,12 @@ class HomeScreen extends ConsumerWidget {
                         },
                       ),
                     ),
-                    loading: () => const SliverFillRemaining(
-                      child: Center(
-                        child: CircularProgressIndicator(),
+                    loading: () => SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                      sliver: SliverList.separated(
+                        itemCount: 6,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (_, __) => _SkeletonCard(),
                       ),
                     ),
                     error: (e, st) => SliverToBoxAdapter(
@@ -368,7 +388,7 @@ class HomeScreen extends ConsumerWidget {
                             Icon(
                               Icons.error_outline_rounded,
                               size: 48,
-                              color: Theme.of(context).colorScheme.error,
+                              color: const Color(0xFF1A5D57),
                             ),
                             const SizedBox(height: 16),
                             Text(
@@ -376,6 +396,7 @@ class HomeScreen extends ConsumerWidget {
                               style: GoogleFonts.poppins(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 16,
+                                color: const Color(0xFF1A5D57),
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -383,7 +404,7 @@ class HomeScreen extends ConsumerWidget {
                               e.toString(),
                               textAlign: TextAlign.center,
                               style: GoogleFonts.poppins(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                color: const Color(0xFF889396),
                               ),
                             ),
                           ],
@@ -396,7 +417,7 @@ class HomeScreen extends ConsumerWidget {
 
               // Juz Tab
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -404,65 +425,27 @@ class HomeScreen extends ConsumerWidget {
                       'Pilih Juz',
                       style: GoogleFonts.poppins(
                         fontWeight: FontWeight.w700,
-                        fontSize: 16,
+                        fontSize: 18,
+                        color: const Color(0xFF1A5D57),
                       ),
                     ),
                     const SizedBox(height: 16),
                     Expanded(
                       child: GridView.builder(
+                        physics: const BouncingScrollPhysics(),
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 3,
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
-                          childAspectRatio: 1.2,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                          childAspectRatio: 1.1,
                         ),
                         itemCount: 30,
                         itemBuilder: (context, index) {
                           final juz = index + 1;
-                          return Card(
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(16),
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => JuzDetailPage(juzNumber: juz)),
-                              ),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(16),
-                                  color: Theme.of(context).colorScheme.surface,
-                                  border: Border.all(
-                                    color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.3),
-                                  ),
-                                ),
-                                padding: const EdgeInsets.all(12),
-                                child: Center(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        'Juz',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 12,
-                                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        '$juz',
-                                        style: GoogleFonts.poppins(
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 22,
-                                          color: Theme.of(context).colorScheme.primary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
+                          return _JuzCard(
+                            juzNumber: juz,
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => JuzDetailPage(juzNumber: juz)),
                             ),
                           );
                         },
@@ -479,40 +462,388 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class _QuickAction extends StatelessWidget {
+class _AppBarIcon extends StatelessWidget {
   final IconData icon;
-  final String label;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  const _AppBarIcon({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 2),
+      child: IconButton(
+        tooltip: tooltip,
+        icon: Icon(icon, color: const Color(0xFFFAF8F0), size: 20),
+        padding: const EdgeInsets.all(8),
+        visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+        onPressed: onPressed,
+      ),
+    );
+  }
+}
+
+class _LastReadCard extends StatelessWidget {
+  final int surah;
+  final int ayah;
   final VoidCallback onTap;
-  const _QuickAction({required this.icon, required this.label, required this.onTap});
+
+  const _LastReadCard({
+    required this.surah,
+    required this.ayah,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Theme.of(context).colorScheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.4)),
-      ),
+      color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF1A5D57), Color(0xFF0D2F2D)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF1A5D57).withOpacity(0.3),
+                blurRadius: 15,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Row(
             children: [
-              Icon(icon, size: 22, color: Theme.of(context).colorScheme.primary),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
-                textAlign: TextAlign.center,
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withOpacity(0.3)),
+                ),
+                child: const Icon(Icons.bookmark_rounded, color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Terakhir Dibaca',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.9),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Surah $surah • Ayat $ayah',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: TextButton.icon(
+                  onPressed: onTap,
+                  icon: Icon(Icons.play_arrow_rounded, color: const Color(0xFF1A5D57), size: 16),
+                  label: Text(
+                    'Lanjutkan',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF1A5D57),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _LastReadSkeleton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8E8E8),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: const BoxDecoration(
+              color: Color(0xFFD0D0D0),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 16,
+                  width: 120,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD0D0D0),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  height: 12,
+                  width: 160,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD0D0D0),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: 80,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFFD0D0D0),
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _QuickAction({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _HoverScale(
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.05),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, size: 18, color: color),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                  style: GoogleFonts.poppins(fontSize: 10.5, fontWeight: FontWeight.w600, color: color),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _JuzCard extends StatelessWidget {
+  final int juzNumber;
+  final VoidCallback onTap;
+
+  const _JuzCard({
+    required this.juzNumber,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _HoverScale(
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.05),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE8E8E8)),
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A5D57).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$juzNumber',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        color: const Color(0xFF1A5D57),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Juz $juzNumber',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: const Color(0xFF1A5D57),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HoverScale extends StatefulWidget {
+  final Widget child;
+  const _HoverScale({required this.child});
+  @override
+  State<_HoverScale> createState() => _HoverScaleState();
+}
+
+class _HoverScaleState extends State<_HoverScale> {
+  bool _hover = false;
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: AnimatedScale(
+        scale: _hover ? 1.03 : 1.0,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+class _SkeletonCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFE8E8E8)),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Container(
+            height: 44, 
+            width: 44, 
+            decoration: const BoxDecoration(
+              color: Color(0xFFE8E8E8),
+              shape: BoxShape.circle
+            )
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 16, 
+                  width: 140, 
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8E8E8),
+                    borderRadius: BorderRadius.circular(8)
+                  )
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  height: 12, 
+                  width: 220, 
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8E8E8),
+                    borderRadius: BorderRadius.circular(6)
+                  )
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

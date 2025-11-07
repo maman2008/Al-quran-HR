@@ -11,32 +11,40 @@ class NotesPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final idxAsync = ref.watch(surahNotesIndexProvider);
     final surahAsync = ref.watch(surahListProvider);
+    
+    final brightness = Theme.of(context).brightness;
+    final isDark = brightness == Brightness.dark;
+    final primaryColor = const Color(0xFF10B981);
+    final backgroundColor = isDark ? const Color(0xFF121212) : const Color(0xFFF8FAFC);
+    final surfaceColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final onSurfaceColor = isDark ? Colors.white : const Color(0xFF1E293B);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: Text('Catatan Surah', 
+        title: Text(
+          'Catatan Surah', 
           style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w600,
-            color: Colors.white
+            fontWeight: FontWeight.w700,
+            fontSize: 20,
+            letterSpacing: .2,
+            color: Colors.white,
           )
         ),
         centerTitle: true,
-        backgroundColor: const Color(0xFF2E7D32), // Green color from screenshot
+        backgroundColor: primaryColor,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
             child: IconButton(
               tooltip: 'Tambah Catatan',
-              icon: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.add_rounded, color: Colors.white),
-              ),
+              icon: const Icon(Icons.add_rounded, color: Colors.white),
               onPressed: () async {
                 final list = await ref.read(surahListProvider.future);
                 if (!context.mounted) return;
@@ -45,7 +53,7 @@ class NotesPage extends ConsumerWidget {
                   isScrollControlled: true,
                   backgroundColor: Colors.transparent,
                   builder: (ctx) {
-                    return _PickSurahSheet(list: list);
+                    return _PickSurahSheet(list: list, primaryColor: primaryColor);
                   },
                 );
                 if (picked != null) {
@@ -58,46 +66,48 @@ class NotesPage extends ConsumerWidget {
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: idxAsync.when(
           data: (ids) {
             final list = surahAsync.maybeWhen(data: (d) => d, orElse: () => <SurahSummary>[]);
             if (ids.isEmpty) {
-              return _buildEmptyState();
+              return _buildEmptyState(primaryColor, onSurfaceColor);
             }
             return ListView.separated(
               itemCount: ids.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (_, __) => const SizedBox(height: 16),
               itemBuilder: (ctx, i) {
                 final n = ids[i];
                 SurahSummary? meta;
                 try { meta = list.firstWhere((e) => e.number == n); } catch (_) {}
                 final title = meta?.englishName ?? 'Surah $n';
-                return _buildNoteCard(ctx, ref, n, title, meta);
+                return _buildNoteCard(ctx, ref, n, title, meta, primaryColor, surfaceColor, onSurfaceColor);
               },
             );
           },
-          loading: () => _buildLoadingState(),
-          error: (e, _) => _buildErrorState(e),
+          loading: () => _buildLoadingState(primaryColor, onSurfaceColor),
+          error: (e, _) => _buildErrorState(e, onSurfaceColor),
         ),
       ),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(Color primaryColor, Color onSurfaceColor) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(24),
+            width: 120,
+            height: 120,
             decoration: BoxDecoration(
-              color: const Color(0xFF2E7D32).withOpacity(0.1),
+              color: primaryColor.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.note_add_rounded, 
-              size: 64, 
-              color: const Color(0xFF2E7D32)
+            child: Icon(
+              Icons.note_add_rounded, 
+              size: 48, 
+              color: primaryColor
             ),
           ),
           const SizedBox(height: 24),
@@ -105,73 +115,19 @@ class NotesPage extends ConsumerWidget {
             'Belum Ada Catatan',
             style: GoogleFonts.poppins(
               fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF424242)
+              fontWeight: FontWeight.w700,
+              color: onSurfaceColor,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Tap tombol + untuk menambah catatan',
-            style: GoogleFonts.poppins(
-              color: const Color(0xFF757575)
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLoadingState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 40,
-            height: 40,
-            child: CircularProgressIndicator(
-              strokeWidth: 3,
-              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2E7D32)),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Memuat catatan...',
-            style: GoogleFonts.poppins(
-              color: const Color(0xFF757575)
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildErrorState(dynamic error) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline_rounded, 
-            size: 64, 
-            color: const Color(0xFFD32F2F)
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Terjadi Kesalahan',
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF424242)
-            ),
-          ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
+            padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(
-              error.toString(),
+              'Tap tombol + di atas untuk menambah catatan surah pertama Anda',
               style: GoogleFonts.poppins(
-                color: const Color(0xFF757575)
+                color: onSurfaceColor.withOpacity(0.6),
+                fontSize: 14,
+                height: 1.5,
               ),
               textAlign: TextAlign.center,
             ),
@@ -181,59 +137,147 @@ class NotesPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildNoteCard(BuildContext context, WidgetRef ref, int n, String title, SurahSummary? meta) {
+  Widget _buildLoadingState(Color primaryColor, Color onSurfaceColor) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 40,
+            height: 40,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Memuat catatan...',
+            style: GoogleFonts.poppins(
+              color: onSurfaceColor.withOpacity(0.6),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(dynamic error, Color onSurfaceColor) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEF2F2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.error_outline_rounded, 
+              size: 40, 
+              color: const Color(0xFFDC2626)
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Terjadi Kesalahan',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: onSurfaceColor,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              error.toString(),
+              style: GoogleFonts.poppins(
+                color: onSurfaceColor.withOpacity(0.6),
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoteCard(BuildContext context, WidgetRef ref, int n, String title, SurahSummary? meta, Color primaryColor, Color surfaceColor, Color onSurfaceColor) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Card(
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
         ),
+        color: surfaceColor,
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: primaryColor.withOpacity(0.1),
+              width: 1,
+            ),
           ),
           child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
             leading: Container(
-              padding: const EdgeInsets.all(12),
+              width: 50,
+              height: 50,
               decoration: BoxDecoration(
-                color: const Color(0xFF2E7D32),
+                gradient: LinearGradient(
+                  colors: [primaryColor, primaryColor.withOpacity(0.8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryColor.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              child: Icon(Icons.sticky_note_2_rounded, 
+              child: Icon(
+                Icons.sticky_note_2_rounded, 
                 color: Colors.white, 
-                size: 20
+                size: 24
               ),
             ),
-            title: Text(title, 
+            title: Text(
+              title, 
               style: GoogleFonts.poppins(
                 fontWeight: FontWeight.w600,
                 fontSize: 16,
-                color: const Color(0xFF424242)
+                color: onSurfaceColor,
               )
             ),
             subtitle: FutureBuilder<String?>(
               future: ref.read(surahNoteProvider(n).future),
               builder: (c, s) => Padding(
-                padding: const EdgeInsets.only(top: 4),
+                padding: const EdgeInsets.only(top: 6),
                 child: Text(
-                  (s.data ?? '').isEmpty ? '—' : (s.data!.length > 80 ? '${s.data!.substring(0, 80)}…' : s.data!),
+                  (s.data ?? '').isEmpty ? 'Tidak ada catatan' : (s.data!.length > 80 ? '${s.data!.substring(0, 80)}…' : s.data!),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.poppins(
-                    color: const Color(0xFF757575),
+                    color: onSurfaceColor.withOpacity(0.6),
                     fontSize: 14,
+                    height: 1.4,
                   ),
                 ),
               ),
@@ -246,24 +290,26 @@ class NotesPage extends ConsumerWidget {
               ref.invalidate(surahNotesIndexProvider);
             },
             trailing: Container(
-              padding: const EdgeInsets.all(6),
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                color: const Color(0xFFD32F2F).withOpacity(0.1),
-                shape: BoxShape.circle,
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: IconButton(
                 tooltip: 'Hapus',
-                icon: Icon(Icons.delete_outline_rounded, 
-                  color: const Color(0xFFD32F2F), 
+                icon: Icon(
+                  Icons.delete_outline_rounded, 
+                  color: const Color(0xFFDC2626), 
                   size: 20
                 ),
                 onPressed: () async {
                   final ok = await showDialog<bool>(
                     context: context,
                     builder: (dCtx) => Dialog(
-                      backgroundColor: Colors.white,
+                      backgroundColor: surfaceColor,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(24),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(24),
@@ -271,29 +317,33 @@ class NotesPage extends ConsumerWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(16),
+                              width: 60,
+                              height: 60,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFD32F2F).withOpacity(0.1),
+                                color: const Color(0xFFFEF2F2),
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(Icons.delete_rounded,
-                                color: const Color(0xFFD32F2F),
-                                size: 32,
+                              child: Icon(
+                                Icons.delete_rounded,
+                                color: const Color(0xFFDC2626),
+                                size: 28,
                               ),
                             ),
                             const SizedBox(height: 16),
                             Text(
                               'Hapus Catatan?',
                               style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w700,
                                 fontSize: 18,
+                                color: onSurfaceColor,
                               ),
                             ),
                             const SizedBox(height: 8),
                             Text(
                               'Catatan untuk $title akan dihapus permanen',
                               style: GoogleFonts.poppins(
-                                color: const Color(0xFF757575),
+                                color: onSurfaceColor.withOpacity(0.6),
+                                fontSize: 14,
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -304,16 +354,17 @@ class NotesPage extends ConsumerWidget {
                                   child: OutlinedButton(
                                     onPressed: () => Navigator.pop(dCtx, false),
                                     style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
-                                      side: BorderSide(color: const Color(0xFF2E7D32)),
+                                      side: BorderSide(color: primaryColor),
                                     ),
-                                    child: Text('Batal', 
+                                    child: Text(
+                                      'Batal', 
                                       style: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.w500,
-                                        color: const Color(0xFF2E7D32)
+                                        fontWeight: FontWeight.w600,
+                                        color: primaryColor,
                                       )
                                     ),
                                   ),
@@ -323,16 +374,17 @@ class NotesPage extends ConsumerWidget {
                                   child: FilledButton(
                                     onPressed: () => Navigator.pop(dCtx, true),
                                     style: FilledButton.styleFrom(
-                                      backgroundColor: const Color(0xFFD32F2F),
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      backgroundColor: const Color(0xFFDC2626),
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                     ),
-                                    child: Text('Hapus', 
+                                    child: Text(
+                                      'Hapus', 
                                       style: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.white
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
                                       )
                                     ),
                                   ),
@@ -352,7 +404,7 @@ class NotesPage extends ConsumerWidget {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Catatan $title dihapus'),
-                        backgroundColor: const Color(0xFFD32F2F),
+                        backgroundColor: const Color(0xFFDC2626),
                         behavior: SnackBarBehavior.floating,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -371,6 +423,12 @@ class NotesPage extends ConsumerWidget {
 
   Future<void> _openEditor(BuildContext context, WidgetRef ref, int surah, {required String initial}) async {
     final ctrl = TextEditingController(text: initial);
+    final brightness = Theme.of(context).brightness;
+    final isDark = brightness == Brightness.dark;
+    final primaryColor = const Color(0xFF10B981);
+    final surfaceColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final onSurfaceColor = isDark ? Colors.white : const Color(0xFF1E293B);
+
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -382,7 +440,7 @@ class NotesPage extends ConsumerWidget {
             top: false,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: surfaceColor,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
                 boxShadow: [
                   BoxShadow(
@@ -403,56 +461,63 @@ class NotesPage extends ConsumerWidget {
                         width: 40,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE0E0E0),
+                          color: onSurfaceColor.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(8),
+                          width: 44,
+                          height: 44,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF2E7D32).withOpacity(0.1),
-                            shape: BoxShape.circle,
+                            color: primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(Icons.edit_note_rounded,
-                            color: const Color(0xFF2E7D32),
-                            size: 20,
+                          child: Icon(
+                            Icons.edit_note_rounded,
+                            color: primaryColor,
+                            size: 24,
                           ),
                         ),
                         const SizedBox(width: 12),
-                        Text(
-                          'Catatan Surah $surah',
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 18,
-                            color: const Color(0xFF424242)
+                        Expanded(
+                          child: Text(
+                            'Catatan Surah $surah',
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
+                              color: onSurfaceColor,
+                            ),
                           ),
                         ),
-                        const Spacer(),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     Container(
+                      height: 200,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFE0E0E0)),
+                        border: Border.all(color: onSurfaceColor.withOpacity(0.2)),
                       ),
                       child: TextField(
                         controller: ctrl,
-                        maxLines: 8,
+                        maxLines: null,
+                        expands: true,
+                        textAlignVertical: TextAlignVertical.top,
                         decoration: InputDecoration(
                           hintText: 'Tulis catatan Anda di sini...',
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.all(16),
                           hintStyle: GoogleFonts.poppins(
-                            color: const Color(0xFF9E9E9E)
+                            color: onSurfaceColor.withOpacity(0.4),
                           ),
                         ),
                         style: GoogleFonts.poppins(
-                          color: const Color(0xFF424242)
+                          color: onSurfaceColor,
+                          fontSize: 15,
                         ),
                       ),
                     ),
@@ -463,16 +528,17 @@ class NotesPage extends ConsumerWidget {
                           child: OutlinedButton(
                             onPressed: () => Navigator.pop(ctx),
                             style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(14),
                               ),
-                              side: BorderSide(color: const Color(0xFF2E7D32)),
+                              side: BorderSide(color: primaryColor),
                             ),
-                            child: Text('Tutup', 
+                            child: Text(
+                              'Tutup', 
                               style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.w500,
-                                color: const Color(0xFF2E7D32)
+                                fontWeight: FontWeight.w600,
+                                color: primaryColor,
                               )
                             ),
                           ),
@@ -487,7 +553,7 @@ class NotesPage extends ConsumerWidget {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text('Catatan Surah $surah tersimpan'),
-                                  backgroundColor: const Color(0xFF2E7D32),
+                                  backgroundColor: primaryColor,
                                   behavior: SnackBarBehavior.floating,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
@@ -496,16 +562,17 @@ class NotesPage extends ConsumerWidget {
                               );
                             },
                             style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF2E7D32),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              backgroundColor: primaryColor,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(14),
                               ),
                             ),
-                            child: Text('Simpan', 
+                            child: Text(
+                              'Simpan', 
                               style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.w500,
-                                color: Colors.white
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
                               )
                             ),
                           ),
@@ -525,7 +592,8 @@ class NotesPage extends ConsumerWidget {
 
 class _PickSurahSheet extends StatefulWidget {
   final List<SurahSummary> list;
-  const _PickSurahSheet({required this.list});
+  final Color primaryColor;
+  const _PickSurahSheet({required this.list, required this.primaryColor});
 
   @override
   State<_PickSurahSheet> createState() => _PickSurahSheetState();
@@ -533,12 +601,19 @@ class _PickSurahSheet extends StatefulWidget {
 
 class _PickSurahSheetState extends State<_PickSurahSheet> {
   String q = '';
+  
   @override
   Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    final isDark = brightness == Brightness.dark;
+    final surfaceColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final onSurfaceColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    
     final filtered = q.isEmpty ? widget.list : widget.list.where((s) => s.englishName.toLowerCase().contains(q) || s.number.toString() == q).toList();
+    
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: surfaceColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
@@ -551,79 +626,109 @@ class _PickSurahSheetState extends State<_PickSurahSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(top: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE0E0E0),
-                borderRadius: BorderRadius.circular(2),
+          // Header dengan gradient
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [widget.primaryColor, widget.primaryColor.withOpacity(0.8)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.bookmark_add_rounded, color: Colors.white, size: 24),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Pilih Surah',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
+          
+          // Search Box
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
             child: Container(
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F5),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE0E0E0)),
+                color: isDark ? const Color(0xFF2D2D2D) : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: widget.primaryColor.withOpacity(0.2)),
               ),
               child: TextField(
                 onChanged: (v) => setState(() => q = v.toLowerCase()),
                 decoration: InputDecoration(
-                  prefixIcon: Icon(Icons.search_rounded, color: const Color(0xFF757575)),
+                  prefixIcon: Icon(Icons.search_rounded, color: widget.primaryColor),
                   hintText: 'Cari surah…',
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   hintStyle: GoogleFonts.poppins(
-                    color: const Color(0xFF9E9E9E)
+                    color: onSurfaceColor.withOpacity(0.4),
                   ),
                 ),
                 style: GoogleFonts.poppins(
-                  color: const Color(0xFF424242)
+                  color: onSurfaceColor,
                 ),
               ),
             ),
           ),
+          
           Flexible(
             child: ListView.separated(
               shrinkWrap: true,
               itemCount: filtered.length,
               separatorBuilder: (_, __) => Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Divider(color: const Color(0xFFE0E0E0), height: 1),
+                child: Divider(
+                  color: onSurfaceColor.withOpacity(0.1), 
+                  height: 1
+                ),
               ),
               itemBuilder: (ctx, i) {
                 final s = filtered[i];
-                return ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  leading: Container(
-                    width: 36,
-                    height: 36,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2E7D32).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      s.number.toString(),
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF2E7D32),
-                        fontSize: 12,
+                return Material(
+                  color: Colors.transparent,
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    leading: Container(
+                      width: 44,
+                      height: 44,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: widget.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        s.number.toString(),
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w700,
+                          color: widget.primaryColor,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
-                  ),
-                  title: Text(
-                    s.englishName,
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF424242)
+                    title: Text(
+                      s.englishName,
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        color: onSurfaceColor,
+                      ),
                     ),
+                    trailing: Icon(
+                      Icons.chevron_right_rounded,
+                      color: widget.primaryColor,
+                    ),
+                    onTap: () => Navigator.pop(context, s),
                   ),
-                  onTap: () => Navigator.pop(context, s),
                 );
               },
             ),

@@ -125,16 +125,59 @@ final surahListProvider = FutureProvider<List<SurahSummary>>((ref) async {
 // Search query state
 final searchQueryProvider = StateProvider<String>((ref) => '');
 
-// Filtered list based on search
+// Filters
+final juzFilterProvider = StateProvider<int?>((ref) => null); // null = semua
+final typeFilterProvider = StateProvider<String?>((ref) => null); // Makkiyah/Madaniyah/null
+final ayahCountFilterProvider = StateProvider<String?>((ref) => null); // 'short'|'medium'|'long'|null
+
+// Filtered list based on search + filters
 final filteredSurahListProvider = Provider<List<SurahSummary>>((ref) {
-  final list = ref.watch(surahListProvider).maybeWhen(data: (d) => d, orElse: () => <SurahSummary>[]);
+  var list = ref.watch(surahListProvider).maybeWhen(data: (d) => d, orElse: () => <SurahSummary>[]);
   final q = ref.watch(searchQueryProvider).toLowerCase();
-  if (q.isEmpty) return list;
-  return list.where((s) =>
-    s.number.toString().contains(q) ||
-    s.name.toLowerCase().contains(q) ||
-    s.englishName.toLowerCase().contains(q)
-  ).toList();
+  final juz = ref.watch(juzFilterProvider);
+  final type = ref.watch(typeFilterProvider);
+  final len = ref.watch(ayahCountFilterProvider);
+
+  if (q.isNotEmpty) {
+    list = list.where((s) =>
+      s.number.toString().contains(q) ||
+      s.name.toLowerCase().contains(q) ||
+      s.englishName.toLowerCase().contains(q)
+    ).toList();
+  }
+
+  if (juz != null) {
+    // Approximate: Surah to Juz mapping not available in summary; fallback: include all (or could be improved later)
+    // Keeping filter no-op until we have per-ayah mapping in models.
+  }
+
+  if (type != null) {
+    list = list.where((s) => s.revelationType.toLowerCase() == type.toLowerCase()).toList();
+  }
+
+  if (len != null) {
+    list = list.where((s) {
+      final n = s.numberOfAyahs;
+      switch (len) {
+        case 'short':
+          return n <= 20;
+        case 'medium':
+          return n > 20 && n <= 60;
+        case 'long':
+          return n > 60;
+        default:
+          return true;
+      }
+    }).toList();
+  }
+
+  return list;
+});
+
+// Per-surah reading progress (0..1). Stored in SharedPreferences as 'progress_surah_{n}'
+final surahProgressProvider = FutureProvider.family<double, int>((ref, surahNumber) async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getDouble('progress_surah_$surahNumber') ?? 0.0;
 });
 
 // Surah details provider combining Arabic, transliteration (optional), Indonesian translation, and audio URLs

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/quran_providers.dart';
+import 'notes_page.dart';
+import 'bookmark_page.dart';
 
 class JuzDetailPage extends ConsumerWidget {
   final int juzNumber;
@@ -14,6 +16,42 @@ class JuzDetailPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('Juz $juzNumber', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+        actions: [
+          // Notes (buka halaman catatan umum)
+          IconButton(
+            tooltip: 'Catatan',
+            icon: Icon(Icons.note_alt_rounded, color: Theme.of(context).colorScheme.primary),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const NotesPage()),
+            ),
+          ),
+          // Info singkat
+          IconButton(
+            tooltip: 'Info Juz',
+            icon: Icon(Icons.info_outline_rounded, color: Theme.of(context).colorScheme.primary),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: Text('Tentang Juz $juzNumber'),
+                  content: const Text('Halaman ini menampilkan ayat-ayat dalam Juz terpilih lengkap dengan teks Arab dan terjemah.'),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+                  ],
+                ),
+              );
+            },
+          ),
+          // Buka daftar bookmark
+          IconButton(
+            tooltip: 'Bookmark',
+            icon: Icon(Icons.bookmark_add_outlined, color: Theme.of(context).colorScheme.primary),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const BookmarkPage()),
+            ),
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: SafeArea(
         child: juzAsync.when(
@@ -44,6 +82,25 @@ class JuzDetailPage extends ConsumerWidget {
                             '${a.surahName} • Ayat ${a.numberInSurah}',
                             style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
                           ),
+                        ),
+                        IconButton(
+                          tooltip: 'Simpan bookmark ayat ini',
+                          icon: Icon(Icons.bookmark_add_outlined, color: Theme.of(context).colorScheme.primary),
+                          onPressed: () async {
+                            await ref.read(bookmarkControllerProvider).toggleWithMeta(
+                                  surah: a.surahNumber,
+                                  ayah: a.numberInSurah,
+                                  surahName: a.surahName,
+                                );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Bookmark ${a.surahName} ayat ${a.numberInSurah} diubah'),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          },
                         ),
                       ],
                     ),
