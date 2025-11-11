@@ -11,6 +11,7 @@ import 'zikir_page.dart';
 import 'notes_page.dart';
 import 'prayer_times_page.dart';
 import 'qibla_page.dart';
+import 'doa_page.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -256,66 +257,108 @@ class HomeScreen extends ConsumerWidget {
                           const SizedBox(height: 24),
                           
                           // Quick Actions
-                          Text(
-                            'Akses Cepat',
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 18,
-                              color: const Color(0xFF1A5D57),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          GridView.builder(
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 4,
-                              crossAxisSpacing: 12,
-                              mainAxisSpacing: 12,
-                              mainAxisExtent: 100,
-                            ),
-                            itemCount: 4,
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemBuilder: (context, index) {
-                              switch (index) {
-                                case 0:
-                                  return _QuickAction(
-                                    icon: Icons.menu_book_rounded,
-                                    label: 'Zikir',
-                                    color: const Color(0xFF1A5D57),
-                                    onTap: () => Navigator.of(context).push(
-                                      MaterialPageRoute(builder: (_) => const ZikirPage()),
-                                    ),
-                                  );
-                                case 1:
-                                  return _QuickAction(
-                                    icon: Icons.note_alt_rounded,
-                                    label: 'Catatan',
-                                    color: const Color(0xFF1A5D57),
-                                    onTap: () => Navigator.of(context).push(
-                                      MaterialPageRoute(builder: (_) => const NotesPage()),
-                                    ),
-                                  );
-                                case 2:
-                                  return _QuickAction(
-                                    icon: Icons.access_time_rounded,
-                                    label: 'Sholat',
-                                    color: const Color(0xFF1A5D57),
-                                    onTap: () => Navigator.of(context).push(
-                                      MaterialPageRoute(builder: (_) => const PrayerTimesPage()),
-                                    ),
-                                  );
-                                default:
-                                  return _QuickAction(
-                                    icon: Icons.explore_rounded,
-                                    label: 'Kiblat',
-                                    color: const Color(0xFF1A5D57),
-                                    onTap: () => Navigator.of(context).push(
-                                      MaterialPageRoute(builder: (_) => const QiblaPage()),
-                                    ),
-                                  );
-                              }
-                            },
-                          ),
+                         Text(
+  'Akses Cepat',
+  style: GoogleFonts.poppins(
+    fontWeight: FontWeight.w700,
+    fontSize: 18,
+    color: const Color(0xFF1A5D57),
+  ),
+),
+const SizedBox(height: 20),
+Container(
+  height: 100,
+  child: ListView.separated(
+    scrollDirection: Axis.horizontal,
+    physics: const BouncingScrollPhysics(),
+    padding: const EdgeInsets.symmetric(horizontal: 4),
+    itemCount: 5,
+    separatorBuilder: (_, __) => const SizedBox(width: 20),
+    itemBuilder: (context, index) {
+      final List<Map<String, dynamic>> quickActions = [
+        {
+          'icon': Icons.auto_awesome_rounded,
+          'label': 'Zikir',
+          'color': Color(0xFF1A5D57),
+          'page': const ZikirPage(),
+        },
+        {
+          'icon': Icons.handshake,
+          'label': 'Doa', 
+          'color': Color(0xFF2C5530),
+          'page': const DoaPage(),
+        },
+        {
+          'icon': Icons.note_alt_rounded,
+          'label': 'Catatan',
+          'color': Color(0xFF7D4E1F),
+          'page': const NotesPage(),
+        },
+        {
+          'icon': Icons.mosque_rounded,
+          'label': 'Sholat',
+          'color': Color(0xFF1E3A5F),
+          'page': const PrayerTimesPage(),
+        },
+        {
+          'icon': Icons.explore_rounded,
+          'label': 'Kiblat',
+          'color': Color(0xFF8B4513),
+          'page': const QiblaPage(),
+        },
+      ];
+
+      final action = quickActions[index];
+      
+      return Container(
+        width: 70,
+        child: Column(
+          children: [
+            // Icon dengan background circle
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: action['color'].withOpacity(0.1),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: action['color'].withOpacity(0.2),
+                  width: 1.5,
+                ),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                shape: CircleBorder(),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(30),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => action['page'] as Widget),
+                  ),
+                  child: Icon(
+                    action['icon'] as IconData,
+                    size: 28,
+                    color: action['color'],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Label
+            Text(
+              action['label'] as String,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF1A5D57),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    },
+  ),
+),
                           const SizedBox(height: 24),
 
                           // Surah List Header

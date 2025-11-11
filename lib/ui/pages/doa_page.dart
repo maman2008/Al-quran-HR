@@ -1,0 +1,335 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../providers/quran_providers.dart';
+
+class DoaPage extends ConsumerStatefulWidget {
+  const DoaPage({super.key});
+
+  @override
+  ConsumerState<DoaPage> createState() => _DoaPageState();
+}
+
+class _DoaPageState extends ConsumerState<DoaPage> {
+  String _source = '';
+  String _query = '';
+  bool _loading = false;
+  String? _error;
+  List<Map<String, dynamic>> _items = [];
+  Timer? _debounce;
+
+  static const _sources = <String>['', 'quran', 'hadits', 'pilihan', 'harian', 'ibadah', 'haji', 'lainnya'];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    setState(() { _loading = true; _error = null; });
+    try {
+      final api = ref.read(muslimApiProvider);
+      List<Map<String, dynamic>> list;
+      if (_query.isNotEmpty) {
+        try {
+          list = await api.searchDoa(_query);
+        } catch (_) {
+          final base = await api.getDoa(source: _source.isEmpty ? null : _source);
+          list = _filterLocal(base, _query);
+        }
+      } else {
+        list = await api.getDoa(source: _source.isEmpty ? null : _source);
+      }
+      if (!mounted) return;
+      setState(() { _items = list; });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _error = 'Gagal memuat doa. Periksa koneksi internet Anda.'; });
+    } finally {
+      if (mounted) setState(() { _loading = false; });
+    }
+  }
+
+  void _setSource(String s) {
+    if (_source == s) return;
+    setState(() { _source = s; });
+    _load();
+  }
+
+  void _onSearch(String v) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 350), () {
+      setState(() { _query = v.trim(); });
+      _load();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = const Color(0xFF1A5D57);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'Doa',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w700,
+            color: primary,
+          ),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.white,
+        elevation: 1,
+        iconTheme: IconThemeData(color: primary),
+      ),
+      body: Column(
+        children: [
+          // Search Section
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // Search Box
+                Material(
+                  elevation: 2,
+                  shadowColor: Colors.black.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(16),
+                  child: TextField(
+                    onChanged: _onSearch,
+                    decoration: InputDecoration(
+                      prefixIcon: Icon(Icons.search_rounded, color: primary),
+                      hintText: 'Cari judul doa...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Filter Chips
+                SizedBox(
+                  height: 40,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _sources.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      final s = _sources[index];
+                      final selected = _source == s;
+                      final label = s.isEmpty ? 'Semua' : s[0].toUpperCase() + s.substring(1);
+                      return FilterChip(
+                        label: Text(
+                          label,
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                            color: selected ? Colors.white : primary,
+                          ),
+                        ),
+                        selected: selected,
+                        onSelected: (_) => _setSource(s),
+                        backgroundColor: Colors.white,
+                        selectedColor: primary,
+                        side: BorderSide(color: primary.withOpacity(0.3)),
+                        checkmarkColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Loading Indicator
+          if (_loading)
+            LinearProgressIndicator(
+              minHeight: 3,
+              backgroundColor: primary.withOpacity(0.1),
+              valueColor: AlwaysStoppedAnimation<Color>(primary),
+            ),
+
+          // Error Message
+          if (_error != null)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.red.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline_rounded, color: Colors.red[700]),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _error!,
+                      style: GoogleFonts.poppins(
+                        color: Colors.red[700],
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // Content
+          Expanded(
+            child: _items.isEmpty && !_loading
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.menu_book_rounded,
+                          size: 64,
+                          color: primary.withOpacity(0.3),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Tidak ada data doa',
+                          style: GoogleFonts.poppins(
+                            color: primary.withOpacity(0.7),
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                    itemCount: _items.length,
+                    itemBuilder: (context, i) => _DoaCard(item: _items[i]),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+List<Map<String, dynamic>> _filterLocal(List<Map<String, dynamic>> base, String q) {
+  final qq = q.toLowerCase();
+  return base.where((m) {
+    final t = (m['title'] ?? m['judul'] ?? m['name'] ?? '').toString().toLowerCase();
+    final id = (m['translation'] ?? m['terjemah'] ?? m['terjemahan'] ?? m['id'] ?? '').toString().toLowerCase();
+    return t.contains(qq) || id.contains(qq);
+  }).toList();
+}
+
+class _DoaCard extends StatelessWidget {
+  final Map<String, dynamic> item;
+  const _DoaCard({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = const Color(0xFF1A5D57);
+    final onSurface = Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black87;
+
+    String title = (item['title'] ?? item['judul'] ?? item['name'] ?? '').toString();
+    String arab = (item['arab'] ?? item['arabic'] ?? '').toString();
+    String indo = (item['translation'] ?? item['terjemah'] ?? item['terjemahan'] ?? item['id'] ?? '').toString();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Title
+            if (title.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: primary.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    color: primary,
+                  ),
+                ),
+              ),
+            if (title.isNotEmpty) const SizedBox(height: 16),
+            
+            // Arabic Text
+            if (arab.isNotEmpty)
+              SelectableText(
+                arab,
+                textAlign: TextAlign.right,
+                style: GoogleFonts.notoNaskhArabic(
+                  fontSize: 22,
+                  height: 1.9,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+            if (arab.isNotEmpty) const SizedBox(height: 16),
+            
+            // Translation
+            if (indo.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: primary.withOpacity(0.03),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: primary.withOpacity(0.1)),
+                ),
+                child: Text(
+                  indo,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14.5,
+                    height: 1.7,
+                    color: onSurface.withOpacity(0.85),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -8,12 +8,14 @@ import '../models/surah_models.dart';
 import '../core/api/quran_com_api.dart';
 import '../core/api/aladhan_api.dart';
 import '../core/api/myquran_api.dart';
+import '../core/api/muslim_api.dart';
 
 // API client provider
 final apiProvider = Provider<AlQuranApi>((ref) => AlQuranApi());
 final quranComApiProvider = Provider<QuranComApi>((ref) => QuranComApi());
 final alAdhanApiProvider = Provider<AlAdhanApi>((ref) => AlAdhanApi());
 final myQuranApiProvider = Provider<MyQuranApi>((ref) => MyQuranApi());
+final muslimApiProvider = Provider<MuslimApi>((ref) => MuslimApi());
 
 // Theme mode toggle and persistence
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
