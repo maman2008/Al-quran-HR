@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  static const Color islamicGreen = Color(0xFF0A7146); // hijau utama
+  static const Color islamicGreen = Color(0xFF10B981); // brand primary
   static const Color islamicGold = Color(0xFFD4AF37); // aksen emas
-  static const Color bgLightStart = Color(0xFFF5FDF9); // latar gradien awal
+  static const Color bgLightStart = Color(0xFFF0FEF4); // latar gradien awal
   static const Color bgLightEnd = Color(0xFFFFFFFF); // latar gradien akhir
+
+  static const Color islamicGreenDark = Color(0xFF059669); // for gradients
 
   static ThemeData light() {
     final base = ThemeData.light();
@@ -50,6 +52,20 @@ class AppTheme {
           borderSide: const BorderSide(color: islamicGreen, width: 1.5),
         ),
       ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: Colors.white,
+        selectedItemColor: islamicGreen,
+        unselectedItemColor: Color(0xFF6B7280),
+        showUnselectedLabels: true,
+        elevation: 8,
+        type: BottomNavigationBarType.fixed,
+      ),
+      navigationBarTheme: const NavigationBarThemeData(
+        backgroundColor: Colors.white,
+        indicatorColor: Color(0x1F10B981),
+        iconTheme: WidgetStatePropertyAll(IconThemeData(color: islamicGreen)),
+        labelTextStyle: WidgetStatePropertyAll(TextStyle(color: islamicGreen, fontWeight: FontWeight.w600)),
+      ),
       cardTheme: CardThemeData(
         elevation: 0,
         color: Colors.white,
@@ -89,6 +105,19 @@ class AppTheme {
           borderSide: BorderSide.none,
         ),
       ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: Color(0xFF121816),
+        selectedItemColor: Color(0xFF78D2A5),
+        unselectedItemColor: Color(0xFFA3B2AA),
+        showUnselectedLabels: true,
+        type: BottomNavigationBarType.fixed,
+      ),
+      navigationBarTheme: const NavigationBarThemeData(
+        backgroundColor: Color(0xFF121816),
+        indicatorColor: Color(0x334ADE80),
+        iconTheme: WidgetStatePropertyAll(IconThemeData(color: Color(0xFF78D2A5))),
+        labelTextStyle: WidgetStatePropertyAll(TextStyle(color: Color(0xFF78D2A5), fontWeight: FontWeight.w600)),
+      ),
       cardTheme: CardThemeData(
         elevation: 0,
         color: const Color(0xFF161D1A),
@@ -97,4 +126,6 @@ class AppTheme {
       useMaterial3: true,
     );
   }
+
+  static const List<Color> primaryGradient = [islamicGreen, islamicGreenDark];
 }

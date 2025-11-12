@@ -40,13 +40,13 @@ class _DoaPageState extends ConsumerState<DoaPage> {
       List<Map<String, dynamic>> list;
       if (_query.isNotEmpty) {
         try {
-          list = await api.searchDoa(_query);
+          list = await api.searchDoaComplete(_query);
         } catch (_) {
-          final base = await api.getDoa(source: _source.isEmpty ? null : _source);
+          final base = await api.getDoaComplete(sourceOrGrup: _source.isEmpty ? null : _source);
           list = _filterLocal(base, _query);
         }
       } else {
-        list = await api.getDoa(source: _source.isEmpty ? null : _source);
+        list = await api.getDoaComplete(sourceOrGrup: _source.isEmpty ? null : _source);
       }
       if (!mounted) return;
       setState(() { _items = list; });
@@ -74,12 +74,12 @@ class _DoaPageState extends ConsumerState<DoaPage> {
 
   @override
   Widget build(BuildContext context) {
-    final primary = const Color(0xFF1A5D57);
+    final primary = const Color(0xFF10B981);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Doa',
+          'Doa & Zikir',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w700,
             color: primary,
@@ -87,36 +87,50 @@ class _DoaPageState extends ConsumerState<DoaPage> {
         ),
         centerTitle: true,
         backgroundColor: Colors.white,
-        elevation: 1,
+        elevation: 0,
         iconTheme: IconThemeData(color: primary),
       ),
       body: Column(
         children: [
-          // Search Section
+          // Header Section
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
             decoration: BoxDecoration(
               color: Colors.white,
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(24),
+                bottomRight: Radius.circular(24),
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+                  color: primary.withOpacity(0.1),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
             child: Column(
               children: [
                 // Search Box
-                Material(
-                  elevation: 2,
-                  shadowColor: Colors.black.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(16),
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: primary.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
                   child: TextField(
                     onChanged: _onSearch,
                     decoration: InputDecoration(
-                      prefixIcon: Icon(Icons.search_rounded, color: primary),
-                      hintText: 'Cari judul doa...',
+                      prefixIcon: Container(
+                        margin: const EdgeInsets.all(12),
+                        child: Icon(Icons.search_rounded, color: primary),
+                      ),
+                      hintText: 'Cari doa atau zikir...',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,
@@ -124,13 +138,18 @@ class _DoaPageState extends ConsumerState<DoaPage> {
                       filled: true,
                       fillColor: Colors.white,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      hintStyle: GoogleFonts.poppins(
+                        color: Colors.grey[600],
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
+                
                 // Filter Chips
                 SizedBox(
-                  height: 40,
+                  height: 36,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: _sources.length,
@@ -139,23 +158,26 @@ class _DoaPageState extends ConsumerState<DoaPage> {
                       final s = _sources[index];
                       final selected = _source == s;
                       final label = s.isEmpty ? 'Semua' : s[0].toUpperCase() + s.substring(1);
-                      return FilterChip(
-                        label: Text(
-                          label,
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                            color: selected ? Colors.white : primary,
+                      return GestureDetector(
+                        onTap: () => _setSource(s),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: selected ? primary : Colors.transparent,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: selected ? primary : primary.withOpacity(0.3),
+                              width: 1.5,
+                            ),
                           ),
-                        ),
-                        selected: selected,
-                        onSelected: (_) => _setSource(s),
-                        backgroundColor: Colors.white,
-                        selectedColor: primary,
-                        side: BorderSide(color: primary.withOpacity(0.3)),
-                        checkmarkColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
+                          child: Text(
+                            label,
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                              color: selected ? Colors.white : primary,
+                            ),
+                          ),
                         ),
                       );
                     },
@@ -168,7 +190,7 @@ class _DoaPageState extends ConsumerState<DoaPage> {
           // Loading Indicator
           if (_loading)
             LinearProgressIndicator(
-              minHeight: 3,
+              minHeight: 2,
               backgroundColor: primary.withOpacity(0.1),
               valueColor: AlwaysStoppedAnimation<Color>(primary),
             ),
@@ -182,18 +204,19 @@ class _DoaPageState extends ConsumerState<DoaPage> {
               decoration: BoxDecoration(
                 color: Colors.red[50],
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.red.withOpacity(0.3)),
+                border: Border.all(color: Colors.red.withOpacity(0.2)),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.error_outline_rounded, color: Colors.red[700]),
+                  Icon(Icons.error_outline_rounded, color: Colors.red[700], size: 20),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       _error!,
                       style: GoogleFonts.poppins(
                         color: Colors.red[700],
-                        fontSize: 14,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
@@ -218,7 +241,16 @@ class _DoaPageState extends ConsumerState<DoaPage> {
                           'Tidak ada data doa',
                           style: GoogleFonts.poppins(
                             color: primary.withOpacity(0.7),
-                            fontSize: 16,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Coba kata kunci lain atau filter berbeda',
+                          style: GoogleFonts.poppins(
+                            color: Colors.grey[600],
+                            fontSize: 13,
                           ),
                         ),
                       ],
@@ -251,23 +283,22 @@ class _DoaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = const Color(0xFF1A5D57);
-    final onSurface = Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black87;
+    final primary = const Color(0xFF10B981);
 
     String title = (item['title'] ?? item['judul'] ?? item['name'] ?? '').toString();
     String arab = (item['arab'] ?? item['arabic'] ?? '').toString();
     String indo = (item['translation'] ?? item['terjemah'] ?? item['terjemahan'] ?? item['id'] ?? '').toString();
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -279,6 +310,7 @@ class _DoaCard extends StatelessWidget {
             // Title
             if (title.isNotEmpty)
               Container(
+                margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: primary.withOpacity(0.08),
@@ -288,12 +320,11 @@ class _DoaCard extends StatelessWidget {
                   title,
                   style: GoogleFonts.poppins(
                     fontWeight: FontWeight.w700,
-                    fontSize: 15,
+                    fontSize: 14,
                     color: primary,
                   ),
                 ),
               ),
-            if (title.isNotEmpty) const SizedBox(height: 16),
             
             // Arabic Text
             if (arab.isNotEmpty)
@@ -301,18 +332,19 @@ class _DoaCard extends StatelessWidget {
                 arab,
                 textAlign: TextAlign.right,
                 style: GoogleFonts.notoNaskhArabic(
-                  fontSize: 22,
-                  height: 1.9,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 20,
+                  height: 1.8,
+                  fontWeight: FontWeight.w500,
                   color: Colors.black87,
                 ),
               ),
-            if (arab.isNotEmpty) const SizedBox(height: 16),
+            if (arab.isNotEmpty) const SizedBox(height: 12),
             
             // Translation
             if (indo.isNotEmpty)
               Container(
-                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.only(top: 12),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: primary.withOpacity(0.03),
                   borderRadius: BorderRadius.circular(12),
@@ -321,9 +353,9 @@ class _DoaCard extends StatelessWidget {
                 child: Text(
                   indo,
                   style: GoogleFonts.poppins(
-                    fontSize: 14.5,
-                    height: 1.7,
-                    color: onSurface.withOpacity(0.85),
+                    fontSize: 13,
+                    height: 1.6,
+                    color: Colors.grey[800],
                   ),
                 ),
               ),
