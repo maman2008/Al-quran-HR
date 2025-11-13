@@ -79,7 +79,7 @@ class _DoaPageState extends ConsumerState<DoaPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Doa & Zikir',
+          'Doa',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w700,
             color: primary,
